@@ -8,6 +8,8 @@ const openclawRoot = path.join(HOME, ".openclaw");
 const workspace = path.join(openclawRoot, "workspace");
 const backupsRoot = path.join(openclawRoot, "backups", "deterministic");
 
+const pkg = require("../package.json");
+
 const tpl = (name) => path.join(__dirname, "..", "templates", name);
 
 const target = {
@@ -24,55 +26,67 @@ This system loads and adheres to SOUL.deterministic.md as a governing philosophi
 `;
 
 function exists(p) {
-  try { fs.accessSync(p); return true; } catch { return false; }
+  try {
+    fs.accessSync(p);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function ensureDir(p) {
   fs.mkdirSync(p, { recursive: true });
 }
 
-function read(p) {
-  return fs.readFileSync(p, "utf8");
-}
-
-function write(p, content) {
+function writeFile(p, content) {
   ensureDir(path.dirname(p));
   fs.writeFileSync(p, content);
 }
 
-function copyFile(src, dst) {
-  ensureDir(path.dirname(dst));
-  fs.copyFileSync(src, dst);
+function copyWithVersionStamp(templatePath, targetPath) {
+  const versionStamp = `<!-- Installed by openclaw-deterministic v${pkg.version} -->\n`;
+  const content = fs.readFileSync(templatePath, "utf8");
+  const stamped = versionStamp + content;
+  writeFile(targetPath, stamped);
 }
 
-function stamp() {
-  return new Date().toISOString().replaceAll(":", "-");
+function timestamp() {
+  return new Date().toISOString().replace(/:/g, "-");
 }
 
 function backupSnapshot(pathsToBackup) {
   ensureDir(backupsRoot);
-  const snap = path.join(backupsRoot, stamp());
+  const snap = path.join(backupsRoot, timestamp());
   ensureDir(snap);
 
   for (const p of pathsToBackup) {
     if (!exists(p)) continue;
-    const rel = path.relative(openclawRoot, p); // keep structure
-    const dst = path.join(snap, rel);
-    ensureDir(path.dirname(dst));
-    fs.copyFileSync(p, dst);
+    const relative = path.relative(openclawRoot, p);
+    const destination = path.join(snap, relative);
+    ensureDir(path.dirname(destination));
+    fs.copyFileSync(p, destination);
   }
 
   return snap;
 }
 
 function installTemplates() {
-  copyFile(tpl("OPERATING_RULES.md"), target.operating);
+  copyWithVersionStamp(
+    tpl("OPERATING_RULES.md"),
+    target.operating
+  );
   console.log("Installed: OPERATING_RULES.md");
 
-  copyFile(tpl("SOUL.deterministic.md"), target.detSoul);
+  copyWithVersionStamp(
+    tpl("SOUL.deterministic.md"),
+    target.detSoul
+  );
   console.log("Installed: SOUL.deterministic.md");
 
-  copyFile(tpl("memory-compactor.SKILL.md"), target.compactor);
+  copyWithVersionStamp(
+    tpl("memory-compactor.SKILL.md"),
+    target.compactor
+  );
   console.log("Installed: skills/memory-compactor/SKILL.md");
 }
 
@@ -83,7 +97,7 @@ function bootstrapSoulIfMissing() {
   }
 
   console.log("No SOUL.md detected — bootstrapping fresh SOUL.md with deterministic overlay.");
-  write(target.soul, OVERLAY_BLOCK.trim() + "\n");
+  writeFile(target.soul, OVERLAY_BLOCK.trim() + "\n");
   console.log("Created: SOUL.md (deterministic overlay enabled by default)");
 }
 
@@ -100,7 +114,12 @@ if (!exists(workspace)) {
 }
 
 console.log("Creating deterministic backup snapshot...");
-const snap = backupSnapshot([target.operating, target.detSoul, target.soul, target.compactor]);
+const snap = backupSnapshot([
+  target.operating,
+  target.detSoul,
+  target.soul,
+  target.compactor,
+]);
 console.log(`Backup location: ${snap}`);
 
 installTemplates();
