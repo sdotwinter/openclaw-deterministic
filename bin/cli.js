@@ -23,6 +23,10 @@ switch (command) {
     require(path.join(__dirname, "init"));
     break;
 
+  case "enable":
+    require(path.join(__dirname, "enable"));
+    break;
+
   case "revert":
     require(path.join(__dirname, "revert"));
     break;
@@ -51,6 +55,7 @@ function showHelp() {
   console.log("  oc-deterministic init");
   console.log("  oc-deterministic doctor");
   console.log("  oc-deterministic install");
+  console.log("  oc-deterministic enable");
   console.log("  oc-deterministic revert");
   console.log("  oc-deterministic --version");
   console.log("  oc-deterministic --help\n");
