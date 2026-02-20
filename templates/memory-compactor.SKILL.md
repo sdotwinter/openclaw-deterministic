@@ -1,5 +1,10 @@
 # Memory Compactor Skill
 
+## Threshold Configuration (Canonical)
+
+HARD_LIMIT: 1200
+RISK_THRESHOLD: 1020
+
 ## Hybrid Trigger Model
 
 ### Priority Order (evaluated in this order)
