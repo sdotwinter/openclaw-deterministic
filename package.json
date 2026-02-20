@@ -1,0 +1,29 @@
+{
+  "name": "@sdotwinter/openclaw-deterministic",
+  "version": "0.1.0",
+  "description": "Deterministic governance and memory compaction layer for OpenClaw",
+  "keywords": [
+    "openclaw",
+    "ai-agent",
+    "deterministic",
+    "memory",
+    "governance",
+    "compaction",
+    "cli"
+  ],
+  "homepage": "https://github.com/sdotwinter/openclaw-deterministic#readme",
+  "bugs": {
+    "url": "https://github.com/sdotwinter/openclaw-deterministic/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sdotwinter/openclaw-deterministic.git"
+  },
+  "license": "MIT",
+  "author": "Sean Winter",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
