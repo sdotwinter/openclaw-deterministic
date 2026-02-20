@@ -1,3 +1,7 @@
+<!--
+Canonical-Hash: SHA256:cecc37622199772452db7adebacc3fb781bba9c53be82abac93d304ebd1ff302
+-->
+
 # Deterministic Governance Overlay — Canonical
 
 ## Purpose

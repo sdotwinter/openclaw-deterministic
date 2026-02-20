@@ -1,3 +1,7 @@
+<!--
+Canonical-Hash: SHA256:7f5a72029152a74d1afc4811d137438d93e0dce6d675f481836e0ceda390020e
+-->
+
 # Deterministic Execution Contract — Hardened Overlay
 
 ## Authority
