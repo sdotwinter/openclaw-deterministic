@@ -8,7 +8,8 @@ const OPENCLAW_DIR = path.join(os.homedir(), ".openclaw");
 const WORKSPACE_DIR = path.join(OPENCLAW_DIR, "workspace");
 const BACKUP_ROOT = path.join(OPENCLAW_DIR, "backups", "deterministic");
 
-const args = process.argv.slice(2);
+// Remove the first argument ("revert")
+const args = process.argv.slice(3);
 
 function listBackups() {
   if (!fs.existsSync(BACKUP_ROOT)) {
