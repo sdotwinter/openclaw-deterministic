@@ -24,7 +24,7 @@
   "type": "commonjs",
   "main": "index.js",
   "bin": {
-    "oc-deterministic": "bin/install.js"
+  "oc-deterministic": "bin/cli.js"
   },
   "scripts": {
     "test": "echo \"No tests specified\""
