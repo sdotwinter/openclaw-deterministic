@@ -15,6 +15,14 @@ const workspace = path.join(openclawRoot, "workspace");
 const DEFAULT_HARD_LIMIT = 1200;
 const DEFAULT_RISK_THRESHOLD = 1020;
 
+const episodicLogPath = path.join(
+  openclawRoot,
+  "workspace",
+  "memory",
+  "episodic",
+  "governance-log.md"
+);
+
 const files = {
   operating: path.join(workspace, "OPERATING_RULES.md"),
   detSoul: path.join(workspace, "SOUL.deterministic.md"),
@@ -33,6 +41,18 @@ function exists(p) {
 
 function read(p) {
   return fs.readFileSync(p, "utf8");
+}
+
+function appendGovernanceEvent(event) {
+  try {
+    const timestamp = new Date().toISOString();
+    const entry = `\n---\nTime: ${timestamp}\nType: ${event.type}\nDetails: ${event.details}\n---\n`;
+
+    fs.mkdirSync(path.dirname(episodicLogPath), { recursive: true });
+    fs.appendFileSync(episodicLogPath, entry);
+  } catch {
+    // Logging must never crash doctor
+  }
 }
 
 function versionFromFile(content) {
@@ -82,24 +102,16 @@ function evaluateVersion(filePath) {
 
 function parseHardLimit() {
   if (!exists(files.compactor)) return null;
-
   const content = read(files.compactor);
-
   const match = content.match(/HARD_LIMIT[^0-9]*([0-9]+)/);
-  if (!match) return null;
-
-  return parseInt(match[1], 10);
+  return match ? parseInt(match[1], 10) : null;
 }
 
 function parseRiskThreshold() {
   if (!exists(files.compactor)) return null;
-
   const content = read(files.compactor);
-
   const match = content.match(/RISK_THRESHOLD[^0-9]*([0-9]+)/);
-  if (!match) return null;
-
-  return parseInt(match[1], 10);
+  return match ? parseInt(match[1], 10) : null;
 }
 
 function evaluate() {
@@ -184,12 +196,18 @@ function printHuman(result) {
 
     if (info.status === "missing") {
       console.log(`❌ ${label} missing.`);
+      appendGovernanceEvent({ type: "file-missing", details: label });
     } else if (info.status === "no-stamp") {
       console.log(`⚠ ${label} version stamp missing.`);
+      appendGovernanceEvent({ type: "no-version-stamp", details: label });
     } else if (info.status === "mismatch") {
       console.log(
         `⚠ ${label} version mismatch (installed ${info.version}, CLI ${pkg.version})`
       );
+      appendGovernanceEvent({
+        type: "version-mismatch",
+        details: `${label} installed ${info.version}, CLI ${pkg.version}`,
+      });
     } else {
       console.log(`✅ ${label} version matches CLI (${info.version})`);
     }
@@ -204,12 +222,20 @@ function printHuman(result) {
 
   if (!result.limits.coherent) {
     console.log("⚠ Threshold configuration drift detected in SKILL.md.");
+    appendGovernanceEvent({
+      type: "threshold-drift",
+      details: `HARD_LIMIT=${result.limits.hardLimitConfigured}, RISK_THRESHOLD=${result.limits.riskThresholdConfigured}`,
+    });
   }
 
   console.log(`\nSemantic memory tokens (est): ${result.semanticTokens}`);
 
   if (result.semanticStatus === "hard-limit-exceeded") {
     console.log("❌ Semantic memory exceeds HARD_LIMIT.");
+    appendGovernanceEvent({
+      type: "semantic-hard-limit-exceeded",
+      details: `Tokens=${result.semanticTokens}`,
+    });
   } else if (result.semanticStatus === "risk-threshold") {
     console.log("⚠ Semantic memory above risk threshold.");
   } else {
