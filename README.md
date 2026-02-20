@@ -1,8 +1,8 @@
 # OpenClaw Deterministic
 
-A deterministic execution, memory governance, and integrity enforcement framework for OpenClaw.
+Deterministic governance, memory discipline, and integrity enforcement framework for OpenClaw.
 
-OpenClaw Deterministic enforces canonical template integrity, semantic memory limits, and execution discipline to transform OpenClaw into a predictable, auditable system suitable for long-running agent deployments.
+OpenClaw Deterministic transforms OpenClaw into a predictable, auditable execution system suitable for long-running agent deployments and CI environments.
 
 This is not an assistant plugin.
 
@@ -16,7 +16,7 @@ Install globally:
 
 npm install -g @sdotwinter/openclaw-deterministic
 
-Then initialize governance inside your OpenClaw workspace:
+Apply deterministic governance to an existing OpenClaw workspace:
 
 oc-deterministic install
 
@@ -24,22 +24,39 @@ Verify installation:
 
 oc-deterministic doctor
 
-Concise health summary:
+Concise health summary (CI-friendly):
 
 oc-deterministic status
 
 ---
 
+## Safety Guarantees
+
+OpenClaw Deterministic enforces execution discipline with explicit safety guarantees:
+
+- Does not overwrite an existing SOUL.md
+- Verifies canonical integrity before upgrade
+- Refuses to upgrade drifted files (unless --force)
+- Creates deterministic backup snapshots before mutation
+- Supports structured revert to previous snapshot
+- Exposes machine-readable health status
+- Blocks silent structural mutation
+
+This system assumes drift is inevitable.
+
+It makes drift visible.
+
+---
+
 ## What This Solves
 
-AI systems drift.
+AI systems drift over time:
 
-They drift in:
-- Memory usage
-- Execution classification
-- File modification behavior
-- Configuration alignment
-- Contract integrity
+- Memory growth
+- File mutation
+- Execution misclassification
+- Configuration divergence
+- Contract ambiguity
 
 OpenClaw Deterministic enforces:
 
@@ -48,9 +65,9 @@ OpenClaw Deterministic enforces:
 - Semantic memory limits
 - Config-driven thresholds
 - Governance event logging
-- Structured machine-readable health reporting
+- Structured health reporting
 
-The goal:
+The objective:
 
 Predictable execution under defined constraints.
 
@@ -60,14 +77,15 @@ Predictable execution under defined constraints.
 
 ### Deterministic Execution Tiers
 
-Execution is classified into three tiers:
+Execution is classified into:
 
 Tier A — Safe  
 Tier B — Governed Modification  
 Tier C — Destructive / Structural  
 
 Each tier defines:
-- Whether diffs are required
+
+- Whether a diff preview is required
 - Whether confirmation is required
 - Whether auto-execution is allowed
 
@@ -79,7 +97,7 @@ This prevents silent behavioral drift.
 
 Deterministic templates embed canonical SHA256 hashes.
 
-`doctor` verifies:
+doctor verifies:
 
 - Template presence
 - Version alignment
@@ -87,7 +105,39 @@ Deterministic templates embed canonical SHA256 hashes.
 
 If a file is manually edited outside deterministic flow, the system detects it.
 
-This enables tamper visibility.
+Tamper visibility is enforced.
+
+---
+
+### Upgrade Integrity Gate
+
+oc-deterministic upgrade:
+
+- Verifies canonical integrity before applying changes
+- Refuses overwrite if drift is detected
+- Supports --force override
+- Supports --dry-run
+
+Upgrade is governed mutation — not blind overwrite.
+
+---
+
+### Deterministic Backup + Revert
+
+Before template mutation:
+
+Snapshots are stored at:
+
+~/.openclaw/backups/deterministic/<timestamp>/
+
+Revert commands:
+
+oc-deterministic revert --list  
+oc-deterministic revert --to <timestamp>
+
+Revert restores deterministic files from snapshot.
+
+This enables safe experimentation without state loss.
 
 ---
 
@@ -100,7 +150,7 @@ Semantic memory is:
 - Evaluated against risk thresholds
 - Logged on violation
 
-Configuration:
+Configuration file:
 
 ~/.openclaw/.deterministic.json
 
@@ -110,10 +160,6 @@ Example:
   "semantic": {
     "HARD_LIMIT": 1200,
     "RISK_THRESHOLD_PERCENT": 85
-  },
-  "governance": {
-    "strict_mode": false,
-    "violation_logging": true
   }
 }
 
@@ -140,21 +186,7 @@ Supports:
 - Machine-readable JSON output
 - Deterministic backup snapshots
 - Governance event logging
-- CI integration
-
----
-
-## Upgrade Model
-
-Templates are version-stamped.
-
-Upgrade flow preserves:
-
-- Backups
-- Deterministic config
-- User SOUL.md
-
-Future releases include safe merge flows for template upgrades.
+- CI integration via exit codes
 
 ---
 
@@ -181,9 +213,9 @@ Designed for:
 - CI-integrated governance
 - Environments requiring auditability
 
-If you need experimentation, use OpenClaw alone.
+If you want experimentation, use OpenClaw alone.
 
-If you need discipline, use Deterministic.
+If you want discipline, use OpenClaw Deterministic.
 
 ---
 
