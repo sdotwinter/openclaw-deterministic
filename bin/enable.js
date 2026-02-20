@@ -61,4 +61,5 @@ process.stdin.once("data", (input) => {
 
   fs.writeFileSync(soulPath, updated);
   console.log("Deterministic overlay enabled successfully.");
+  process.exit(0);
 });
