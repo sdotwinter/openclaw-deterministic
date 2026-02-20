@@ -1,151 +1,98 @@
 #!/usr/bin/env node
 
 const fs = require("fs");
-const os = require("os");
 const path = require("path");
-const readline = require("readline");
+const os = require("os");
 
-const command = process.argv[2];
+const HOME = os.homedir();
+const OPENCLAW_DIR = path.join(HOME, ".openclaw");
+const WORKSPACE_DIR = path.join(OPENCLAW_DIR, "workspace");
+const TEMPLATE_DIR = path.join(__dirname, "..", "templates");
 
-if (!command) {
-  showHelp();
-  process.exit(0);
+function log(msg) {
+  console.log(msg);
 }
 
-if (command === "doctor") {
-  runDoctor(false);
-} else if (command === "install") {
-  runInstall();
-} else if (command === "--version" || command === "-v") {
-  console.log("openclaw-deterministic v0.1.0");
-  process.exit(0);
-} else {
-  console.error(`Unknown command: ${command}\n`);
-  showHelp();
+function exitWith(msg) {
+  console.error(msg);
   process.exit(1);
 }
 
-function showHelp() {
-  console.log("OpenClaw Deterministic CLI\n");
-  console.log("Usage:");
-  console.log("  oc-deterministic doctor");
-  console.log("  oc-deterministic install");
-  console.log("  oc-deterministic --version\n");
+function exists(p) {
+  return fs.existsSync(p);
 }
 
-function getPaths() {
-  const homeDir = os.homedir();
-  const openclawDir = path.join(homeDir, ".openclaw");
-  const workspacePath = path.join(openclawDir, "workspace");
-
-  return { openclawDir, workspacePath };
+function ensureDir(p) {
+  if (!exists(p)) {
+    fs.mkdirSync(p, { recursive: true });
+  }
 }
 
-function runDoctor(silent = false) {
-  const { openclawDir, workspacePath } = getPaths();
+function copyFileSafe(src, dest) {
+  if (!exists(dest)) {
+    fs.copyFileSync(src, dest);
+    log(`✅ Installed: ${path.basename(dest)}`);
+  } else {
+    log(`⚠️  Skipped (already exists): ${path.basename(dest)}`);
+  }
+}
 
-  if (!fs.existsSync(openclawDir)) {
-    if (!silent) {
-      console.error("❌ OpenClaw not detected.");
-      console.error(`Expected directory: ${openclawDir}`);
-    }
-    return { fatal: true };
+function backupFile(filePath, backupDir) {
+  if (!exists(filePath)) return;
+
+  const filename = path.basename(filePath);
+  const dest = path.join(backupDir, filename);
+  fs.copyFileSync(filePath, dest);
+  log(`🗂️  Backed up: ${filename}`);
+}
+
+function timestamp() {
+  const now = new Date();
+  return now.toISOString().replace(/[:.]/g, "-");
+}
+
+function validateWorkspace() {
+  if (!exists(OPENCLAW_DIR)) {
+    exitWith("❌ OpenClaw not detected.\nExpected directory: " + OPENCLAW_DIR);
   }
 
-  if (!fs.existsSync(workspacePath)) {
-    if (!silent) {
-      console.error("⚠️ OpenClaw detected but workspace missing.");
-      console.error(`Expected workspace at: ${workspacePath}`);
-    }
-    return { fatal: true };
+  if (!exists(WORKSPACE_DIR)) {
+    exitWith("❌ OpenClaw workspace not detected.\nExpected directory: " + WORKSPACE_DIR);
   }
-
-  const checks = [
-    { label: "memory/", path: path.join(workspacePath, "memory"), type: "dir" },
-    { label: "memory/working/", path: path.join(workspacePath, "memory", "working"), type: "dir" },
-    { label: "memory/episodic/", path: path.join(workspacePath, "memory", "episodic"), type: "dir" },
-    { label: "memory/semantic/", path: path.join(workspacePath, "memory", "semantic"), type: "dir" },
-    { label: "skills/", path: path.join(workspacePath, "skills"), type: "dir" },
-    { label: "skills/memory-compactor/", path: path.join(workspacePath, "skills", "memory-compactor"), type: "dir" },
-    { label: "OPERATING_RULES.md", path: path.join(workspacePath, "OPERATING_RULES.md"), type: "file" }
-  ];
-
-  const missing = [];
-
-  checks.forEach(item => {
-    if (!fs.existsSync(item.path)) {
-      missing.push(item);
-    }
-  });
-
-  if (!silent) {
-    console.log("Workspace validation report:\n");
-    checks.forEach(item => {
-      if (fs.existsSync(item.path)) {
-        console.log(`✔ ${item.label}`);
-      } else {
-        console.log(`✖ ${item.label} (missing)`);
-      }
-    });
-    console.log("");
-  }
-
-  return {
-    fatal: false,
-    missing,
-    workspacePath
-  };
 }
 
 function runInstall() {
-  console.log("Running install phase...\n");
+  log("Running deterministic install phase...\n");
 
-  const result = runDoctor(true);
+  validateWorkspace();
 
-  if (result.fatal) {
-    console.error("Cannot install. OpenClaw workspace not valid.");
-    process.exit(1);
-  }
+  const backupDir = path.join(WORKSPACE_DIR, "_backup", timestamp());
+  ensureDir(backupDir);
 
-  if (result.missing.length === 0) {
-    console.log("✅ Workspace already fully configured.");
-    process.exit(0);
-  }
+  // Backup important files if they exist
+  backupFile(path.join(WORKSPACE_DIR, "OPERATING_RULES.md"), backupDir);
+  backupFile(path.join(WORKSPACE_DIR, "SOUL.md"), backupDir);
 
-  console.log("The following items are missing and will be created:\n");
-  result.missing.forEach(item => {
-    console.log(`• ${item.label}`);
-  });
+  log("\n--- Installing Governance Files ---");
 
-  console.log("");
+  // Install OPERATING_RULES.md (only if missing)
+  const operatingSrc = path.join(TEMPLATE_DIR, "OPERATING_RULES.md");
+  const operatingDest = path.join(WORKSPACE_DIR, "OPERATING_RULES.md");
+  copyFileSafe(operatingSrc, operatingDest);
 
-  confirmAction("Proceed with installation? (y/n): ", answer => {
-    if (answer.toLowerCase() !== "y") {
-      console.log("Install aborted.");
-      process.exit(0);
-    }
+  log("\n--- Installing Memory Compactor Skill ---");
 
-    result.missing.forEach(item => {
-      if (item.type === "dir") {
-        fs.mkdirSync(item.path, { recursive: true });
-      } else if (item.type === "file") {
-        fs.writeFileSync(item.path, "# OPERATING_RULES\n\nGenerated by openclaw-deterministic.\n");
-      }
-    });
+  const skillDir = path.join(WORKSPACE_DIR, "skills", "memory-compactor");
+  ensureDir(skillDir);
 
-    console.log("\n✅ Installation complete.");
-    process.exit(0);
-  });
+  const skillSrc = path.join(TEMPLATE_DIR, "memory-compactor.SKILL.md");
+  const skillDest = path.join(skillDir, "SKILL.md");
+  copyFileSafe(skillSrc, skillDest);
+
+  log("\n--- SOUL Installation Deferred ---");
+  log("⚠️  SOUL.md not modified (manual merge required)");
+
+  log("\n✅ Deterministic install complete.");
 }
 
-function confirmAction(question, callback) {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
-
-  rl.question(question, answer => {
-    rl.close();
-    callback(answer);
-  });
-}
+runInstall();
