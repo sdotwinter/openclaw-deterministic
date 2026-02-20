@@ -3,7 +3,6 @@
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const crypto = require("crypto");
 
 // -----------------------------
 // Args
@@ -91,10 +90,6 @@ function timestamp() {
   return new Date().toISOString().replace(/:/g, "-");
 }
 
-function sha256(content) {
-  return crypto.createHash("sha256").update(content).digest("hex");
-}
-
 function backupSnapshot(pathsToBackup) {
   if (DRY_RUN) {
     console.log("[DRY-RUN] Would create backup snapshot.");
@@ -124,12 +119,11 @@ function backupSnapshot(pathsToBackup) {
 function copyWithVersionStamp(src, dest) {
   const raw = readFile(src);
   const clean = raw.replace(/^\uFEFF/, "");
-  const hash = sha256(clean);
 
-  const stamped = `${VERSION_STAMP}
-<!-- Canonical-Hash: SHA256:${hash} -->
-
-${clean}`;
+  // IMPORTANT:
+  // Do NOT generate or modify canonical hash.
+  // Template already contains canonical hash header.
+  const stamped = `${VERSION_STAMP}\n${clean}`;
 
   writeFile(dest, stamped);
 
