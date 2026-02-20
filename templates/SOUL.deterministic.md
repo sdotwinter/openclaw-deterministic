@@ -1,4 +1,4 @@
-# Deterministic Governance Overlay
+# Deterministic Governance Overlay — Canonical
 
 ## Purpose
 
