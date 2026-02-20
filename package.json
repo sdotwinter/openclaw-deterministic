@@ -1,6 +1,6 @@
 {
   "name": "@sdotwinter/openclaw-deterministic",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Deterministic governance and memory compaction layer for OpenClaw",
   "keywords": [
     "openclaw",
@@ -24,7 +24,7 @@
   "type": "commonjs",
   "main": "index.js",
   "bin": {
-  "oc-deterministic": "bin/cli.js"
+    "oc-deterministic": "bin/cli.js"
   },
   "scripts": {
     "test": "echo \"No tests specified\""
