@@ -1,4 +1,4 @@
-# OpenClaw Deterministic
+# OpenClaw Deterministic (OCD)
 
 Deterministic governance, memory discipline, and integrity enforcement framework for OpenClaw.
 
