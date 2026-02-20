@@ -3,6 +3,7 @@
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const crypto = require("crypto");
 
 const JSON_MODE = process.argv.includes("--json");
 
@@ -88,6 +89,44 @@ Details: ${event.details}
   }
 }
 
+// -----------------------------
+// Canonical Integrity Verification
+// -----------------------------
+
+function sha256(content) {
+  return crypto.createHash("sha256").update(content).digest("hex");
+}
+
+function extractHash(content) {
+  const match = content.match(/Canonical-Hash:\s*SHA256:([a-f0-9]+)/);
+  return match ? match[1] : null;
+}
+
+function stripHeaders(content) {
+  return content.replace(/<!--[\s\S]*?-->/g, "").trim();
+}
+
+function verifyIntegrity(filePath) {
+  if (!exists(filePath)) {
+    return { present: false };
+  }
+
+  const raw = read(filePath);
+  const storedHash = extractHash(raw);
+
+  if (!storedHash) {
+    return { present: true, valid: false };
+  }
+
+  const stripped = stripHeaders(raw);
+  const currentHash = sha256(stripped);
+
+  return {
+    present: true,
+    valid: storedHash === currentHash,
+  };
+}
+
 function evaluate() {
   const result = {
     cliVersion: CLI_VERSION,
@@ -105,6 +144,26 @@ function evaluate() {
     compactor: exists(paths.compactor),
     soul: exists(paths.soul),
   };
+
+// -----------------------------
+// Canonical Integrity Checks
+// -----------------------------
+
+result.integrity = {
+  operating: verifyIntegrity(paths.operating),
+  detSoul: verifyIntegrity(paths.detSoul),
+  compactor: verifyIntegrity(paths.compactor),
+};
+
+// Log governance violations if hashes fail
+for (const [key, status] of Object.entries(result.integrity)) {
+  if (status.present && status.valid === false) {
+    appendGovernanceEvent({
+      type: "canonical-hash-mismatch",
+      details: `${key} failed canonical integrity verification.`,
+    });
+  }
+}
 
   const cfg = readJsonSafe(paths.config);
 
@@ -170,6 +229,20 @@ function printHuman(r) {
       console.log(`⚠ ${key} missing.`);
     }
   }
+
+if (r.integrity) {
+  console.log("\nCanonical Integrity:");
+
+  for (const [key, status] of Object.entries(r.integrity)) {
+    if (!status.present) {
+      console.log(`⚠ ${key} not present (cannot verify).`);
+    } else if (status.valid) {
+      console.log(`✅ ${key} integrity verified.`);
+    } else {
+      console.log(`❌ ${key} integrity FAILED.`);
+    }
+  }
+}
 
   if (!r.config.present) {
     console.log("⚠ Deterministic config missing. Using defaults.");
