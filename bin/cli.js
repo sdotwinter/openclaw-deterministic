@@ -30,9 +30,13 @@ switch (command) {
   case "revert":
     require(path.join(__dirname, "revert"));
     break;
-  
+
   case "audit":
     require(path.join(__dirname, "audit"));
+    break;
+
+  case "upgrade":
+    require(path.join(__dirname, "upgrade"));
     break;
 
   case "--version":
@@ -59,6 +63,7 @@ function showHelp() {
   console.log("  oc-deterministic init");
   console.log("  oc-deterministic doctor");
   console.log("  oc-deterministic install");
+  console.log("  oc-deterministic upgrade");
   console.log("  oc-deterministic enable");
   console.log("  oc-deterministic revert");
   console.log("  oc-deterministic audit");
