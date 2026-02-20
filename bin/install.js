@@ -3,6 +3,7 @@
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const crypto = require("crypto");
 
 // -----------------------------
 // Args
@@ -87,8 +88,11 @@ function readFile(p) {
 }
 
 function timestamp() {
-  // keep filesystem-safe
   return new Date().toISOString().replace(/:/g, "-");
+}
+
+function sha256(content) {
+  return crypto.createHash("sha256").update(content).digest("hex");
 }
 
 function backupSnapshot(pathsToBackup) {
@@ -114,13 +118,22 @@ function backupSnapshot(pathsToBackup) {
   return snap;
 }
 
+// -----------------------------
+// Canonical Install Function
+// -----------------------------
 function copyWithVersionStamp(src, dest) {
   const raw = readFile(src);
-  const stamped = `${VERSION_STAMP}\n${raw.replace(/^\uFEFF/, "")}`;
+  const clean = raw.replace(/^\uFEFF/, "");
+  const hash = sha256(clean);
+
+  const stamped = `${VERSION_STAMP}
+<!-- Canonical-Hash: SHA256:${hash} -->
+
+${clean}`;
+
   writeFile(dest, stamped);
 
   if (!DRY_RUN) {
-    // keep output consistent with your CLI style
     const pretty = dest.startsWith(workspace)
       ? dest.replace(workspace + path.sep, "")
       : dest;
@@ -134,7 +147,6 @@ function copyWithVersionStamp(src, dest) {
 // Install steps
 // -----------------------------
 function installTemplates() {
-  // Ensure skill directory exists
   ensureDir(path.dirname(target.compactor));
 
   copyWithVersionStamp(tpl("OPERATING_RULES.md"), target.operating);
@@ -205,8 +217,6 @@ const pathsToBackup = [
   target.operating,
   target.detSoul,
   target.compactor,
-  // NOTE: we do NOT back up SOUL.md here because install never modifies it.
-  // If you later add an "enable" flow that edits SOUL.md, that command should back it up there.
   target.config,
 ];
 
