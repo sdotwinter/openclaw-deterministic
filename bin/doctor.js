@@ -12,6 +12,9 @@ const HOME = process.env.HOME;
 const openclawRoot = path.join(HOME, ".openclaw");
 const workspace = path.join(openclawRoot, "workspace");
 
+const DEFAULT_HARD_LIMIT = 1200;
+const DEFAULT_RISK_THRESHOLD = 1020;
+
 const files = {
   operating: path.join(workspace, "OPERATING_RULES.md"),
   detSoul: path.join(workspace, "SOUL.deterministic.md"),
@@ -77,6 +80,28 @@ function evaluateVersion(filePath) {
   return { status: "mismatch", version };
 }
 
+function parseHardLimit() {
+  if (!exists(files.compactor)) return null;
+
+  const content = read(files.compactor);
+
+  const match = content.match(/HARD_LIMIT[^0-9]*([0-9]+)/);
+  if (!match) return null;
+
+  return parseInt(match[1], 10);
+}
+
+function parseRiskThreshold() {
+  if (!exists(files.compactor)) return null;
+
+  const content = read(files.compactor);
+
+  const match = content.match(/RISK_THRESHOLD[^0-9]*([0-9]+)/);
+  if (!match) return null;
+
+  return parseInt(match[1], 10);
+}
+
 function evaluate() {
   const result = {
     cliVersion: pkg.version,
@@ -86,6 +111,13 @@ function evaluate() {
     overlayEnabled: false,
     semanticTokens: 0,
     semanticStatus: "safe",
+    limits: {
+      hardLimitConfigured: null,
+      riskThresholdConfigured: null,
+      hardLimitDefault: DEFAULT_HARD_LIMIT,
+      riskThresholdDefault: DEFAULT_RISK_THRESHOLD,
+      coherent: true,
+    },
   };
 
   if (!result.openclawDetected || !result.workspaceDetected) {
@@ -101,9 +133,26 @@ function evaluate() {
   const tokens = estimateSemanticTokens();
   result.semanticTokens = tokens;
 
-  if (tokens > 1200) {
+  const hardLimit = parseHardLimit();
+  const riskThreshold = parseRiskThreshold();
+
+  result.limits.hardLimitConfigured = hardLimit;
+  result.limits.riskThresholdConfigured = riskThreshold;
+
+  if (hardLimit && hardLimit !== DEFAULT_HARD_LIMIT) {
+    result.limits.coherent = false;
+  }
+
+  if (riskThreshold && riskThreshold !== DEFAULT_RISK_THRESHOLD) {
+    result.limits.coherent = false;
+  }
+
+  const effectiveHardLimit = hardLimit || DEFAULT_HARD_LIMIT;
+  const effectiveRiskThreshold = riskThreshold || DEFAULT_RISK_THRESHOLD;
+
+  if (tokens > effectiveHardLimit) {
     result.semanticStatus = "hard-limit-exceeded";
-  } else if (tokens > 1020) {
+  } else if (tokens > effectiveRiskThreshold) {
     result.semanticStatus = "risk-threshold";
   } else {
     result.semanticStatus = "safe";
@@ -153,12 +202,16 @@ function printHuman(result) {
       : "⚠ Deterministic overlay NOT enabled in SOUL.md."
   );
 
+  if (!result.limits.coherent) {
+    console.log("⚠ Threshold configuration drift detected in SKILL.md.");
+  }
+
   console.log(`\nSemantic memory tokens (est): ${result.semanticTokens}`);
 
   if (result.semanticStatus === "hard-limit-exceeded") {
-    console.log("❌ Semantic memory exceeds HARD_LIMIT (1200).");
+    console.log("❌ Semantic memory exceeds HARD_LIMIT.");
   } else if (result.semanticStatus === "risk-threshold") {
-    console.log("⚠ Semantic memory above risk threshold (1020).");
+    console.log("⚠ Semantic memory above risk threshold.");
   } else {
     console.log("✅ Semantic memory within safe bounds.");
   }
