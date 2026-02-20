@@ -6,6 +6,7 @@ const path = require("path");
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes("--dry-run");
+const FORCE = args.includes("--force");
 
 const pkg = require(path.join(__dirname, "..", "package.json"));
 const CLI_VERSION = pkg.version;
@@ -15,6 +16,7 @@ const openclawRoot = path.join(home, ".openclaw");
 const workspace = path.join(openclawRoot, "workspace");
 
 const VERSION_REGEX = /Installed by openclaw-deterministic v([0-9.]+)/;
+const HASH_REGEX = /Canonical-Hash:\s*SHA256:([a-f0-9]+)/;
 
 const files = [
   "OPERATING_RULES.md",
@@ -48,37 +50,100 @@ function getInstalledVersion(content) {
   return match ? match[1] : null;
 }
 
+function extractHash(content) {
+  const match = content.match(HASH_REGEX);
+  return match ? match[1] : null;
+}
+
+function stripHeaders(content) {
+  return content.replace(/<!--[\s\S]*?-->/g, "").trim();
+}
+
+function verifyIntegrity(installedContent) {
+  const storedHash = extractHash(installedContent);
+  if (!storedHash) {
+    return { valid: false, reason: "missing-canonical-hash" };
+  }
+
+  const stripped = stripHeaders(installedContent);
+  const crypto = require("crypto");
+  const currentHash = crypto
+    .createHash("sha256")
+    .update(stripped)
+    .digest("hex");
+
+  if (storedHash !== currentHash) {
+    return { valid: false, reason: "hash-mismatch" };
+  }
+
+  return { valid: true };
+}
+
+function loadTemplate(relPath) {
+  const templatePath = path.join(__dirname, "..", "templates", relPath);
+  if (!exists(templatePath)) {
+    console.error(`Template missing: ${relPath}`);
+    process.exit(1);
+  }
+  return read(templatePath);
+}
+
 function upgradeFile(relPath) {
   const targetPath = path.join(workspace, relPath);
-  const templatePath = path.join(__dirname, "..", "templates", relPath);
 
-  if (!exists(targetPath)) return;
-
-  const installed = read(targetPath);
-  const template = read(templatePath);
-
-  const installedVersion = getInstalledVersion(installed);
-
-  if (installedVersion === CLI_VERSION) {
-    console.log(`✓ ${relPath} already up to date.`);
+  if (!exists(targetPath)) {
+    console.log(`⚠ Skipping ${relPath} (not installed).`);
     return;
   }
 
-  console.log(`Upgrading ${relPath} from v${installedVersion} → v${CLI_VERSION}`);
+  const installed = read(targetPath);
+  const integrity = verifyIntegrity(installed);
 
-  const stamped = `<!-- Installed by openclaw-deterministic v${CLI_VERSION} -->\n${template}`;
+  if (!integrity.valid && !FORCE) {
+    console.error(
+      `❌ Refusing to upgrade ${relPath}: ${integrity.reason}.`
+    );
+    console.error(
+      "   File has been modified or is missing canonical header."
+    );
+    console.error("   Re-run with --force to override.");
+    process.exit(2);
+  }
+
+  const template = loadTemplate(relPath);
+
+  const stamped = template.replace(
+    VERSION_REGEX,
+    `Installed by openclaw-deterministic v${CLI_VERSION}`
+  );
 
   write(targetPath, stamped);
+
+  if (!DRY_RUN) {
+    console.log(`✅ Upgraded ${relPath} → v${CLI_VERSION}`);
+  }
 }
 
-if (!exists(openclawRoot) || !exists(workspace)) {
-  console.error("OpenClaw workspace not found.");
+if (!exists(openclawRoot)) {
+  console.error("OpenClaw not found at ~/.openclaw");
   process.exit(1);
 }
 
-console.log(`Running deterministic upgrade → CLI v${CLI_VERSION}\n`);
+if (!exists(workspace)) {
+  console.error("OpenClaw workspace missing at ~/.openclaw/workspace");
+  process.exit(1);
+}
 
-files.forEach(upgradeFile);
+console.log(`\nRunning deterministic upgrade → v${CLI_VERSION}\n`);
 
-console.log("\nUpgrade complete.\n");
+for (const rel of files) {
+  upgradeFile(rel);
+}
+
+if (DRY_RUN) {
+  console.log("\nDry-run complete. No changes written.\n");
+} else {
+  console.log("\nUpgrade complete.\n");
+}
+
 process.exit(0);
