@@ -2,58 +2,81 @@
 
 const fs = require("fs");
 const path = require("path");
-const os = require("os");
 
-const pkg = require("../package.json");
+const HOME = process.env.HOME;
+const workspace = path.join(HOME, ".openclaw", "workspace");
 
-const OPENCLAW_DIR = path.join(os.homedir(), ".openclaw");
-const WORKSPACE_DIR = path.join(OPENCLAW_DIR, "workspace");
+const files = {
+  operating: path.join(workspace, "OPERATING_RULES.md"),
+  soul: path.join(workspace, "SOUL.md"),
+  deterministicSoul: path.join(workspace, "SOUL.deterministic.md"),
+  skill: path.join(workspace, "skills", "memory-compactor", "SKILL.md"),
+  semantic: path.join(workspace, "memory", "semantic", "openclaw.md"),
+};
 
-function checkFile(filePath, label) {
-  if (!fs.existsSync(filePath)) {
-    console.log(`❌ Missing: ${label}`);
-    return;
+const MARKER = "## Deterministic Governance Overlay";
+const HARD_LIMIT = 1200;
+const RISK_THRESHOLD = 1020;
+
+function exists(p) {
+  try {
+    fs.accessSync(p);
+    return true;
+  } catch {
+    return false;
   }
-
-  const content = fs.readFileSync(filePath, "utf8");
-
-  if (!content.includes("Installed by openclaw-deterministic")) {
-    console.log(`⚠️  ${label} exists but is not deterministic-managed.`);
-    return;
-  }
-
-  if (!content.includes(`v${pkg.version}`)) {
-    console.log(`⚠️  ${label} version drift detected.`);
-    return;
-  }
-
-  console.log(`✅ ${label} OK (v${pkg.version})`);
 }
 
-function runDoctor() {
-  console.log("Running deterministic doctor...\n");
-
-  if (!fs.existsSync(OPENCLAW_DIR)) {
-    console.log("❌ OpenClaw not installed.");
-    process.exit(1);
-  }
-
-  checkFile(
-    path.join(WORKSPACE_DIR, "OPERATING_RULES.md"),
-    "OPERATING_RULES.md"
-  );
-
-  checkFile(
-    path.join(WORKSPACE_DIR, "SOUL.deterministic.md"),
-    "SOUL.deterministic.md"
-  );
-
-  checkFile(
-    path.join(WORKSPACE_DIR, "skills", "memory-compactor", "SKILL.md"),
-    "memory-compactor SKILL.md"
-  );
-
-  console.log("\nDoctor complete.");
+function tokenEstimate(text) {
+  if (!text) return 0;
+  return Math.ceil(text.split(/\s+/).length * 1.3);
 }
 
-runDoctor();
+console.log("\nRunning deterministic doctor...\n");
+
+// File checks
+console.log(exists(files.operating)
+  ? "✅ OPERATING_RULES.md present."
+  : "❌ OPERATING_RULES.md missing.");
+
+console.log(exists(files.deterministicSoul)
+  ? "✅ SOUL.deterministic.md present."
+  : "❌ SOUL.deterministic.md missing.");
+
+console.log(exists(files.skill)
+  ? "✅ memory-compactor SKILL.md present."
+  : "❌ memory-compactor SKILL.md missing.");
+
+// Activation check
+if (exists(files.soul)) {
+  const soulContent = fs.readFileSync(files.soul, "utf8");
+  if (soulContent.includes(MARKER)) {
+    console.log("✅ Deterministic overlay ENABLED.");
+  } else {
+    console.log("⚠ Deterministic overlay installed but NOT enabled.");
+  }
+} else {
+  console.log("❌ SOUL.md missing.");
+}
+
+// Semantic memory health
+if (exists(files.semantic)) {
+  const semanticContent = fs.readFileSync(files.semantic, "utf8");
+  const tokens = tokenEstimate(semanticContent);
+
+  console.log(`\nSemantic memory tokens (est): ${tokens}`);
+
+  if (tokens > HARD_LIMIT) {
+    console.log("🚨 ABOVE HARD LIMIT (Tier C enforced).");
+  } else if (tokens > RISK_THRESHOLD) {
+    console.log("⚠ Near risk threshold (85%).");
+  } else {
+    console.log("✅ Semantic memory within safe bounds.");
+  }
+} else {
+  console.log("\nℹ No semantic memory file detected.");
+}
+
+console.log("\nDoctor complete.\n");
+
+process.exit(0);
