@@ -3,12 +3,15 @@
 const fs = require("fs");
 const path = require("path");
 
+const pkg = require("../package.json");
+
 const HOME = process.env.HOME;
 const openclawRoot = path.join(HOME, ".openclaw");
 const workspace = path.join(openclawRoot, "workspace");
 const backupsRoot = path.join(openclawRoot, "backups", "deterministic");
 
-const pkg = require("../package.json");
+const args = process.argv.slice(2);
+const DRY_RUN = args.includes("--dry-run");
 
 const tpl = (name) => path.join(__dirname, "..", "templates", name);
 
@@ -35,10 +38,16 @@ function exists(p) {
 }
 
 function ensureDir(p) {
-  fs.mkdirSync(p, { recursive: true });
+  if (!DRY_RUN) {
+    fs.mkdirSync(p, { recursive: true });
+  }
 }
 
 function writeFile(p, content) {
+  if (DRY_RUN) {
+    console.log(`[DRY-RUN] Would write: ${p}`);
+    return;
+  }
   ensureDir(path.dirname(p));
   fs.writeFileSync(p, content);
 }
@@ -47,6 +56,11 @@ function copyWithVersionStamp(templatePath, targetPath) {
   const versionStamp = `<!-- Installed by openclaw-deterministic v${pkg.version} -->\n`;
   const content = fs.readFileSync(templatePath, "utf8");
   const stamped = versionStamp + content;
+
+  if (DRY_RUN) {
+    console.log(`[DRY-RUN] Would install: ${targetPath}`);
+  }
+
   writeFile(targetPath, stamped);
 }
 
@@ -55,14 +69,21 @@ function timestamp() {
 }
 
 function backupSnapshot(pathsToBackup) {
+  if (DRY_RUN) {
+    console.log("[DRY-RUN] Would create backup snapshot.");
+    return null;
+  }
+
   ensureDir(backupsRoot);
   const snap = path.join(backupsRoot, timestamp());
   ensureDir(snap);
 
   for (const p of pathsToBackup) {
     if (!exists(p)) continue;
+
     const relative = path.relative(openclawRoot, p);
     const destination = path.join(snap, relative);
+
     ensureDir(path.dirname(destination));
     fs.copyFileSync(p, destination);
   }
@@ -71,23 +92,9 @@ function backupSnapshot(pathsToBackup) {
 }
 
 function installTemplates() {
-  copyWithVersionStamp(
-    tpl("OPERATING_RULES.md"),
-    target.operating
-  );
-  console.log("Installed: OPERATING_RULES.md");
-
-  copyWithVersionStamp(
-    tpl("SOUL.deterministic.md"),
-    target.detSoul
-  );
-  console.log("Installed: SOUL.deterministic.md");
-
-  copyWithVersionStamp(
-    tpl("memory-compactor.SKILL.md"),
-    target.compactor
-  );
-  console.log("Installed: skills/memory-compactor/SKILL.md");
+  copyWithVersionStamp(tpl("OPERATING_RULES.md"), target.operating);
+  copyWithVersionStamp(tpl("SOUL.deterministic.md"), target.detSoul);
+  copyWithVersionStamp(tpl("memory-compactor.SKILL.md"), target.compactor);
 }
 
 function bootstrapSoulIfMissing() {
@@ -97,33 +104,50 @@ function bootstrapSoulIfMissing() {
   }
 
   console.log("No SOUL.md detected — bootstrapping fresh SOUL.md with deterministic overlay.");
+
+  if (DRY_RUN) {
+    console.log("[DRY-RUN] Would create SOUL.md with deterministic overlay.");
+    return;
+  }
+
   writeFile(target.soul, OVERLAY_BLOCK.trim() + "\n");
   console.log("Created: SOUL.md (deterministic overlay enabled by default)");
 }
 
 if (!exists(openclawRoot)) {
   console.error("OpenClaw not found at ~/.openclaw");
-  console.error("Install OpenClaw first, then rerun oc-deterministic install.");
   process.exit(1);
 }
 
 if (!exists(workspace)) {
   console.error("OpenClaw workspace missing at ~/.openclaw/workspace");
-  console.error("OpenClaw may not be fully initialized. Run `openclaw onboard` then retry.");
   process.exit(1);
 }
 
-console.log("Creating deterministic backup snapshot...");
+if (DRY_RUN) {
+  console.log("\nRunning deterministic install (dry-run mode)...\n");
+} else {
+  console.log("Creating deterministic backup snapshot...");
+}
+
 const snap = backupSnapshot([
   target.operating,
   target.detSoul,
   target.soul,
   target.compactor,
 ]);
-console.log(`Backup location: ${snap}`);
+
+if (snap) {
+  console.log(`Backup location: ${snap}`);
+}
 
 installTemplates();
 bootstrapSoulIfMissing();
 
-console.log("\nDeterministic governance installed successfully.");
+if (DRY_RUN) {
+  console.log("\nDry-run complete. No changes were written.\n");
+} else {
+  console.log("\nDeterministic governance installed successfully.\n");
+}
+
 process.exit(0);
