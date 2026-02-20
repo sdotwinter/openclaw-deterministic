@@ -1,4 +1,4 @@
-# OpenClaw Deterministic — Roadmap
+# OpenClaw Deterministic (OCD) — Roadmap
 
 This roadmap outlines the next phases of deterministic governance evolution.
 
