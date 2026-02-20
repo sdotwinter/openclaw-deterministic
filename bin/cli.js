@@ -15,6 +15,10 @@ switch (command) {
     require(path.join(__dirname, "doctor"));
     break;
 
+  case "status":
+    require(path.join(__dirname, "status"));
+    break;
+
   case "install":
     require(path.join(__dirname, "install"));
     break;
@@ -62,6 +66,7 @@ function showHelp() {
   console.log("Usage:");
   console.log("  oc-deterministic init");
   console.log("  oc-deterministic doctor");
+  console.log("  oc-deterministic status");
   console.log("  oc-deterministic install");
   console.log("  oc-deterministic upgrade");
   console.log("  oc-deterministic enable");
