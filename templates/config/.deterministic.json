@@ -1,0 +1,10 @@
+{
+  "semantic": {
+    "HARD_LIMIT": 1200,
+    "RISK_THRESHOLD_PERCENT": 85
+  },
+  "governance": {
+    "strict_mode": false,
+    "violation_logging": true
+  }
+}
