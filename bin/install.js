@@ -23,43 +23,42 @@ function timestamp() {
 }
 
 function addHeader(content) {
-  const header =
-`# Installed by openclaw-deterministic v${pkg.version}
-# Installed at: ${new Date().toISOString()}
-
-`;
-  return header + content;
+  return (
+    `# Installed by openclaw-deterministic v${pkg.version}\n` +
+    `# Installed at: ${new Date().toISOString()}\n\n` +
+    content
+  );
 }
 
-function backupFile(filePath, backupDir) {
-  if (fs.existsSync(filePath)) {
-    const fileName = path.basename(filePath);
-    fs.copyFileSync(filePath, path.join(backupDir, fileName));
-  }
+function backupRelative(filePath, backupDir) {
+  if (!fs.existsSync(filePath)) return;
+
+  const relativePath = path.relative(WORKSPACE_DIR, filePath);
+  const backupTarget = path.join(backupDir, relativePath);
+
+  ensureDir(path.dirname(backupTarget));
+  fs.copyFileSync(filePath, backupTarget);
 }
 
-function installFile(templateName, targetPath, backupDir) {
+function installFile(templateName, relativeTargetPath, backupDir) {
   const templatePath = path.join(TEMPLATES_DIR, templateName);
+  const targetPath = path.join(WORKSPACE_DIR, relativeTargetPath);
 
-  if (!fs.existsSync(templatePath)) {
-    console.error(`Template not found: ${templateName}`);
-    process.exit(1);
-  }
+  ensureDir(path.dirname(targetPath));
 
-  backupFile(targetPath, backupDir);
+  backupRelative(targetPath, backupDir);
 
   const templateContent = fs.readFileSync(templatePath, "utf8");
   const stampedContent = addHeader(templateContent);
 
   fs.writeFileSync(targetPath, stampedContent, "utf8");
 
-  console.log(`Installed: ${targetPath}`);
+  console.log(`Installed: ${relativeTargetPath}`);
 }
 
 function runInstall() {
   if (!fs.existsSync(OPENCLAW_DIR)) {
     console.error("OpenClaw directory not found.");
-    console.error("Install OpenClaw first: npm i -g openclaw && openclaw onboard");
     process.exit(1);
   }
 
@@ -72,27 +71,11 @@ function runInstall() {
   console.log("Creating deterministic backup snapshot...");
   console.log(`Backup location: ${backupDir}`);
 
-  // Install OPERATING_RULES.md
-  installFile(
-    "OPERATING_RULES.md",
-    path.join(WORKSPACE_DIR, "OPERATING_RULES.md"),
-    backupDir
-  );
-
-  // Install deterministic SOUL overlay
-  installFile(
-    "SOUL.deterministic.md",
-    path.join(WORKSPACE_DIR, "SOUL.deterministic.md"),
-    backupDir
-  );
-
-  // Install memory-compactor skill
-  const skillsDir = path.join(WORKSPACE_DIR, "skills", "memory-compactor");
-  ensureDir(skillsDir);
-
+  installFile("OPERATING_RULES.md", "OPERATING_RULES.md", backupDir);
+  installFile("SOUL.deterministic.md", "SOUL.deterministic.md", backupDir);
   installFile(
     "memory-compactor.SKILL.md",
-    path.join(skillsDir, "SKILL.md"),
+    path.join("skills", "memory-compactor", "SKILL.md"),
     backupDir
   );
 
