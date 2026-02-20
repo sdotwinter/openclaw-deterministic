@@ -15,6 +15,8 @@ if (command === "doctor") {
   require(path.join(__dirname, "install"));
 } else if (command === "init") {
   require(path.join(__dirname, "init"));
+} else if (command === "revert") {
+  require(path.join(__dirname, "revert"));
 } else if (command === "--version" || command === "-v") {
   // Keep this in sync with package.json version (manual for now)
   console.log("openclaw-deterministic v0.1.0");
@@ -31,5 +33,6 @@ function showHelp() {
   console.log("  oc-deterministic init");
   console.log("  oc-deterministic doctor");
   console.log("  oc-deterministic install");
+  console.log("  oc-deterministic revert");
   console.log("  oc-deterministic --version\n");
 }
