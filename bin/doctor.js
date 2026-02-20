@@ -5,6 +5,9 @@ const path = require("path");
 
 const pkg = require("../package.json");
 
+const args = process.argv.slice(2);
+const JSON_MODE = args.includes("--json");
+
 const HOME = process.env.HOME;
 const openclawRoot = path.join(HOME, ".openclaw");
 const workspace = path.join(openclawRoot, "workspace");
@@ -34,27 +37,6 @@ function versionFromFile(content) {
   return match ? match[1] : null;
 }
 
-function checkVersion(filePath, label) {
-  if (!exists(filePath)) {
-    console.log(`❌ ${label} missing.`);
-    return;
-  }
-
-  const content = read(filePath);
-  const version = versionFromFile(content);
-
-  if (!version) {
-    console.log(`⚠ ${label} version stamp missing.`);
-    return;
-  }
-
-  if (version === pkg.version) {
-    console.log(`✅ ${label} version matches CLI (${version})`);
-  } else {
-    console.log(`⚠ ${label} version mismatch (installed ${version}, CLI ${pkg.version})`);
-  }
-}
-
 function overlayEnabled() {
   if (!exists(files.soul)) return false;
   const content = read(files.soul);
@@ -76,43 +58,129 @@ function estimateSemanticTokens() {
   return Math.ceil(content.length / 4);
 }
 
-console.log("\nRunning deterministic doctor...\n");
-
-if (!exists(openclawRoot)) {
-  console.log("❌ OpenClaw directory not found.");
-  process.exit(1);
-}
-
-if (!exists(workspace)) {
-  console.log("❌ Workspace missing.");
-  process.exit(1);
-}
-
-checkVersion(files.operating, "OPERATING_RULES.md");
-checkVersion(files.detSoul, "SOUL.deterministic.md");
-checkVersion(files.compactor, "memory-compactor SKILL.md");
-
-if (exists(files.soul)) {
-  console.log("✅ SOUL.md present.");
-  if (overlayEnabled()) {
-    console.log("✅ Deterministic overlay ENABLED in SOUL.md.");
-  } else {
-    console.log("⚠ Deterministic overlay NOT enabled in SOUL.md.");
+function evaluateVersion(filePath) {
+  if (!exists(filePath)) {
+    return { status: "missing", version: null };
   }
-} else {
-  console.log("⚠ SOUL.md not found.");
+
+  const content = read(filePath);
+  const version = versionFromFile(content);
+
+  if (!version) {
+    return { status: "no-stamp", version: null };
+  }
+
+  if (version === pkg.version) {
+    return { status: "match", version };
+  }
+
+  return { status: "mismatch", version };
 }
 
-const semanticTokens = estimateSemanticTokens();
-console.log(`\nSemantic memory tokens (est): ${semanticTokens}`);
+function evaluate() {
+  const result = {
+    cliVersion: pkg.version,
+    openclawDetected: exists(openclawRoot),
+    workspaceDetected: exists(workspace),
+    files: {},
+    overlayEnabled: false,
+    semanticTokens: 0,
+    semanticStatus: "safe",
+  };
 
-if (semanticTokens > 1200) {
-  console.log("❌ Semantic memory exceeds HARD_LIMIT (1200).");
-} else if (semanticTokens > 1020) {
-  console.log("⚠ Semantic memory above risk threshold (1020).");
-} else {
-  console.log("✅ Semantic memory within safe bounds.");
+  if (!result.openclawDetected || !result.workspaceDetected) {
+    return result;
+  }
+
+  result.files.operating = evaluateVersion(files.operating);
+  result.files.detSoul = evaluateVersion(files.detSoul);
+  result.files.compactor = evaluateVersion(files.compactor);
+
+  result.overlayEnabled = overlayEnabled();
+
+  const tokens = estimateSemanticTokens();
+  result.semanticTokens = tokens;
+
+  if (tokens > 1200) {
+    result.semanticStatus = "hard-limit-exceeded";
+  } else if (tokens > 1020) {
+    result.semanticStatus = "risk-threshold";
+  } else {
+    result.semanticStatus = "safe";
+  }
+
+  return result;
 }
 
-console.log("\nDoctor complete.\n");
+function printHuman(result) {
+  console.log("\nRunning deterministic doctor...\n");
+
+  if (!result.openclawDetected) {
+    console.log("❌ OpenClaw directory not found.");
+    process.exit(1);
+  }
+
+  if (!result.workspaceDetected) {
+    console.log("❌ Workspace missing.");
+    process.exit(1);
+  }
+
+  for (const [name, info] of Object.entries(result.files)) {
+    const label =
+      name === "operating"
+        ? "OPERATING_RULES.md"
+        : name === "detSoul"
+        ? "SOUL.deterministic.md"
+        : "memory-compactor SKILL.md";
+
+    if (info.status === "missing") {
+      console.log(`❌ ${label} missing.`);
+    } else if (info.status === "no-stamp") {
+      console.log(`⚠ ${label} version stamp missing.`);
+    } else if (info.status === "mismatch") {
+      console.log(
+        `⚠ ${label} version mismatch (installed ${info.version}, CLI ${pkg.version})`
+      );
+    } else {
+      console.log(`✅ ${label} version matches CLI (${info.version})`);
+    }
+  }
+
+  console.log("✅ SOUL.md present.");
+  console.log(
+    result.overlayEnabled
+      ? "✅ Deterministic overlay ENABLED in SOUL.md."
+      : "⚠ Deterministic overlay NOT enabled in SOUL.md."
+  );
+
+  console.log(`\nSemantic memory tokens (est): ${result.semanticTokens}`);
+
+  if (result.semanticStatus === "hard-limit-exceeded") {
+    console.log("❌ Semantic memory exceeds HARD_LIMIT (1200).");
+  } else if (result.semanticStatus === "risk-threshold") {
+    console.log("⚠ Semantic memory above risk threshold (1020).");
+  } else {
+    console.log("✅ Semantic memory within safe bounds.");
+  }
+
+  console.log("\nDoctor complete.\n");
+}
+
+const result = evaluate();
+
+if (JSON_MODE) {
+  console.log(JSON.stringify(result, null, 2));
+
+  if (!result.openclawDetected || !result.workspaceDetected) {
+    process.exit(2);
+  }
+
+  if (result.semanticStatus === "hard-limit-exceeded") {
+    process.exit(3);
+  }
+
+  process.exit(0);
+}
+
+printHuman(result);
 process.exit(0);
