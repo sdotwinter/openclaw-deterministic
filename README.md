@@ -14,19 +14,39 @@ It is a governance layer.
 
 Install globally:
 
+```bash
 npm install -g @sdotwinter/openclaw-deterministic
+```
+
+Add to your PATH (optional but recommended):
+
+```bash
+export PATH="$PATH:$(npm root -g)/@sdotwinter/openclaw-deterministic/bin"
+```
+
+Or create a symlink:
+
+```bash
+sudo ln -s $(npm root -g)/@sdotwinter/openclaw-deterministic/bin/oc-deterministic /usr/local/bin/
+```
 
 Apply deterministic governance to an existing OpenClaw workspace:
 
+```bash
 oc-deterministic install
+```
 
 Verify installation:
 
+```bash
 oc-deterministic doctor
+```
 
 Concise health summary (CI-friendly):
 
+```bash
 oc-deterministic status
+```
 
 ---
 
@@ -156,12 +176,17 @@ Configuration file:
 
 Example:
 
+```json
 {
   "semantic": {
     "HARD_LIMIT": 1200,
     "RISK_THRESHOLD_PERCENT": 85
+  },
+  "governance": {
+    "violation_logging": true
   }
 }
+```
 
 This prevents uncontrolled memory expansion.
 

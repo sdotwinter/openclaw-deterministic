@@ -4,7 +4,6 @@
     "RISK_THRESHOLD_PERCENT": 85
   },
   "governance": {
-    "strict_mode": false,
     "violation_logging": true
   }
 }
