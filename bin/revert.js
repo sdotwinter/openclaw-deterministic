@@ -46,10 +46,20 @@ function restoreDirectoryRecursive(srcDir, destDir) {
 }
 
 function restoreBackup(timestamp) {
+  // Validate timestamp format (ISO-like: YYYY-MM-DDTHH-MM-SS.mmmZ)
+  const timestampRegex = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.\d{3}Z$/;
+  if (!timestampRegex.test(timestamp)) {
+    console.error(`Invalid timestamp format: ${timestamp}`);
+    console.error("Expected format: 2026-02-21T04-43-51.094Z");
+    console.error("Use 'oc-deterministic revert --list' to see available backups.");
+    process.exit(1);
+  }
+
   const backupDir = path.join(BACKUP_ROOT, timestamp);
 
   if (!fs.existsSync(backupDir)) {
-    console.log("Backup not found.");
+    console.error(`Backup not found: ${timestamp}`);
+    console.error("Use 'oc-deterministic revert --list' to see available backups.");
     process.exit(1);
   }
 
