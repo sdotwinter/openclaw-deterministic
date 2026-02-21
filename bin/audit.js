@@ -34,6 +34,14 @@ function exists(p) {
   }
 }
 
+function read(p) {
+  return fs.readFileSync(p, "utf8");
+}
+
+function stripHeaders(content) {
+  return content.replace(/<!--[\s\S]*?-->/g, "").trim();
+}
+
 console.log("\nRunning deterministic audit...\n");
 
 let driftFound = false;
@@ -52,10 +60,26 @@ for (const file of files) {
   }
 
   try {
+    const templateContent = stripHeaders(read(file.template));
+    const installedContent = stripHeaders(read(file.installed));
+
+    // Write stripped content to temp files for diff
+    const tmpDir = fs.mkdtempSync(path.join(require("os").tmpdir(), "audit-"));
+    const tmpTemplate = path.join(tmpDir, "template");
+    const tmpInstalled = path.join(tmpDir, "installed");
+
+    fs.writeFileSync(tmpTemplate, templateContent);
+    fs.writeFileSync(tmpInstalled, installedContent);
+
     const diff = execSync(
-      `diff -u "${file.template}" "${file.installed}"`,
+      `diff -u "${tmpTemplate}" "${tmpInstalled}"`,
       { stdio: "pipe" }
     ).toString();
+
+    // Cleanup temp files
+    fs.unlinkSync(tmpTemplate);
+    fs.unlinkSync(tmpInstalled);
+    fs.rmdirSync(tmpDir);
 
     if (diff.trim().length === 0) {
       console.log(`✅ ${file.name} matches template.`);
