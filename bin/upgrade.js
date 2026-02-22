@@ -27,11 +27,14 @@ const workspace = path.join(openclawRoot, "workspace");
 const VERSION_REGEX = /Installed by openclaw-deterministic v([0-9.]+)/;
 const HASH_REGEX = /Canonical-Hash:\s*SHA256:([a-f0-9]+)/;
 
-const files = [
-  "OPERATING_RULES.md",
-  "SOUL.deterministic.md",
-  "memory-compactor.SKILL.md",
-];
+// Map template files to their actual workspace locations
+const fileMap = {
+  "OPERATING_RULES.md": "OPERATING_RULES.md",
+  "SOUL.deterministic.md": "SOUL.deterministic.md",
+  "memory-compactor.SKILL.md": "skills/memory-compactor/SKILL.md"
+};
+
+const files = Object.keys(fileMap);
 
 function exists(p) {
   try {
@@ -98,7 +101,7 @@ function loadTemplate(relPath) {
 }
 
 function upgradeFile(relPath) {
-  const targetPath = path.join(workspace, relPath);
+  const targetPath = path.join(workspace, fileMap[relPath] || relPath);
 
   if (!exists(targetPath)) {
     console.log(`⚠ Skipping ${relPath} (not installed).`);
