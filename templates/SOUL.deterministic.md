@@ -56,3 +56,10 @@ Rules:
 - Routine status checks must NOT generate memory.
 - Memory entries must follow structured schema.
 - Determinism applies to memory generation.
+
+## Memory Write Triggers
+
+When to write to each tier:
+- **memory/working/** - During active incident investigation, before root cause confirmed
+- **memory/episodic/** - After fix confirmed, root cause known
+- **memory/semantic/** - Never (handled by memory-compactor skill)

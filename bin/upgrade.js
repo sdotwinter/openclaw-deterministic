@@ -8,6 +8,15 @@ const args = process.argv.slice(2);
 const DRY_RUN = args.includes("--dry-run");
 const FORCE = args.includes("--force");
 
+
+const MEMORY_RULES_BLOCK = `
+## Memory Write Triggers
+
+When to write to each tier:
+- **memory/working/** - During active incident investigation, before root cause confirmed
+- **memory/episodic/** - After fix confirmed, root cause known
+- **memory/semantic/** - Never (handled by memory-compactor skill)
+`.trim();
 const pkg = require(path.join(__dirname, "..", "package.json"));
 const CLI_VERSION = pkg.version;
 
@@ -134,6 +143,30 @@ if (!exists(workspace)) {
   process.exit(1);
 }
 
+
+function appendMemoryRulesToSoul() {
+  const soulPath = path.join(workspace, "SOUL.md");
+  if (!exists(soulPath)) {
+    console.log("No SOUL.md found — skipping memory rules.");
+    return;
+  }
+
+  const content = fs.readFileSync(soulPath, "utf8");
+  if (content.includes("Memory Write Triggers")) {
+    console.log("Memory rules already present — skipping.");
+    return;
+  }
+
+  console.log("Appending memory write rules to SOUL.md...");
+  if (DRY_RUN) {
+    console.log("[DRY-RUN] Would append memory rules.");
+    return;
+  }
+
+  fs.appendFileSync(soulPath, "\n" + MEMORY_RULES_BLOCK + "\n");
+  console.log("Updated: SOUL.md with memory write rules");
+}
+
 console.log(`\nRunning deterministic upgrade → v${CLI_VERSION}\n`);
 
 for (const rel of files) {
@@ -143,6 +176,7 @@ for (const rel of files) {
 if (DRY_RUN) {
   console.log("\nDry-run complete. No changes written.\n");
 } else {
+  appendMemoryRulesToSoul();
   console.log("\nUpgrade complete.\n");
 }
 

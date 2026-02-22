@@ -26,6 +26,15 @@ const OVERLAY_BLOCK = `
 This system loads and adheres to SOUL.deterministic.md as a governing philosophical constraint.
 `.trim();
 
+
+const MEMORY_RULES_BLOCK = `
+## Memory Write Triggers
+
+When to write to each tier:
+- **memory/working/** - During active incident investigation, before root cause confirmed
+- **memory/episodic/** - After fix confirmed, root cause known
+- **memory/semantic/** - Never (handled by memory-compactor skill)
+`.trim();
 // -----------------------------
 // Paths
 // -----------------------------
@@ -171,6 +180,28 @@ function installConfigIfMissing() {
   console.log(`Installed: ${target.config}`);
 }
 
+function appendMemoryRulesToSoul() {
+  if (!exists(target.soul)) {
+    console.log("No SOUL.md found — skipping memory rules.");
+    return;
+  }
+
+  const content = read(target.soul);
+  if (content.includes("Memory Write Triggers")) {
+    console.log("Memory rules already present in SOUL.md — skipping.");
+    return;
+  }
+
+  console.log("Appending memory write rules to SOUL.md...");
+  if (DRY_RUN) {
+    console.log("[DRY-RUN] Would append memory rules to SOUL.md.");
+    return;
+  }
+
+  fs.appendFileSync(target.soul, "\n" + MEMORY_RULES_BLOCK + "\n");
+  console.log("Updated: SOUL.md with memory write rules");
+}
+
 function bootstrapSoulIfMissing() {
   if (exists(target.soul)) {
     console.log("User SOUL.md exists — NOT modified.");
@@ -224,6 +255,7 @@ if (!DRY_RUN) {
 installTemplates();
 installConfigIfMissing();
 bootstrapSoulIfMissing();
+appendMemoryRulesToSoul();
 
 if (DRY_RUN) {
   console.log("\nDry-run complete. No changes were written.\n");
