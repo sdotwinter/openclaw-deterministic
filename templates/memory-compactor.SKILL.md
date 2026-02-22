@@ -1,5 +1,5 @@
 <!--
-Canonical-Hash: SHA256:976962bce64984b3e8d64e063eccfe491760bd6a06393d854789853417681cc9
+Canonical-Hash: SHA256:3166f922ed65819dc3cc3fdee1101625ecd80f6994fd08271254235aa51d7a78
 -->
 
 # Memory Compactor Skill
@@ -16,12 +16,19 @@ RISK_THRESHOLD: 1020
 2. Semantic risk threshold (>1020 tokens = 85% of HARD_LIMIT)
 3. Volume overload triggers
 4. Weekly trigger
+5. Incident detection trigger
 
 ### Time-Based Trigger (Baseline)
 - Cron: Every Sunday at 03:00 UTC (unchanged)
 - **Dry-run first**: Weekly run must evaluate thresholds before executing
 - **Execute only if thresholds met**
 - If no thresholds met → exit cleanly with report
+
+### Incident Detection Trigger (Auto)
+- Runs on every cron execution
+- Scans OpenClaw logs for errors
+- Auto-creates working memory entries when issues detected
+- Does NOT overwrite - creates new entries only
 
 ### Volume-Based Triggers
 **Working tier triggers:**
@@ -80,6 +87,7 @@ All compaction runs must report:
 - Which trigger fired
 - Tier classification applied
 - Cooldown status
+- Incident detection results (if any)
 - If no action taken: Report reason explicitly
 
 ## Trigger
@@ -90,6 +98,57 @@ Maintain tiered memory system by:
 1. Compacting old working memory into episodic summaries
 2. Extracting durable insights into semantic memory
 3. Archiving raw files (never deleting)
+4. Auto-detecting incidents from logs
+
+---
+
+## Auto-Incident Detection
+
+### What It Does
+On every run, scan OpenClaw logs for errors and automatically create working memory entries.
+
+### Log Sources to Scan
+- `~/.openclaw/logs/` - OpenClaw log files
+- `~/.openclaw/cron/logs/` - Cron job logs
+- Recent session outputs
+
+### Error Patterns to Detect
+- `ERROR` | `error` | `Error`
+- `FAILED` | `failed` | `Failure`
+- `Exception` | `exception`
+- `Crashed` | `crash`
+- `Timeout` | `timeout`
+- HTTP 5xx errors
+- Connection refused errors
+
+### Working Entry Format (Auto-Created)
+```markdown
+# Auto-Detected Incident
+Date: [ISO timestamp]
+Source: [log file name]
+
+Error: [extracted error message]
+Context: [surrounding log lines]
+Detected by: memory-compactor skill
+Status: Needs investigation
+```
+
+### Rules
+- Create NEW entry, never overwrite existing
+- Skip if similar incident already logged (within 24 hours)
+- Only create entry - do NOT investigate or fix
+- Mark as "Needs investigation" status
+- Limit: Max 5 auto-created entries per run
+
+### Output
+After incident scan, report:
+```
+🔍 Incident Detection:
+   • Logs scanned: X
+   • Errors found: X
+   • New entries created: X
+   • Skipped (duplicate): X
+```
 
 ---
 
@@ -163,6 +222,12 @@ Before appending: Check for similar Title (substring/fuzzy match)
 
 ## Workflow
 
+### 0. Incident Detection (New!)
+- Scan logs for errors
+- Create working entries for detected issues
+- Skip duplicates (within 24 hours)
+- Limit: 5 new entries max per run
+
 ### 1. Identify Files to Compact
 - Scan `memory/working/` for files older than 7 days
 - Scan `memory/episodic/` for files older than 30 days
@@ -233,6 +298,7 @@ For each episodic file >30 days:
 - ⛔ Never write governance/debug/logs to semantic
 - ⛔ Never bypass schema validation
 - ⛔ Never ignore cooldown
+- ⛔ Never investigate or fix incidents (only detect)
 - ✅ Always preserve full history in archive/
 - ✅ Always enforce semantic entry schema
 - ✅ Always check duplicate before append
@@ -242,6 +308,10 @@ For each episodic file >30 days:
 After run, report:
 ```
 🗑️ Memory Compaction Complete
+🔍 Incident Detection:
+   • Logs scanned: X
+   • Errors found: X
+   • New entries created: X
 📦 Working→Episodic: X files compacted
 📚 Episodic→Semantic: Y insights extracted
 📁 Archived: Z files moved
