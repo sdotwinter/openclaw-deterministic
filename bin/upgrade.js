@@ -30,7 +30,7 @@ const HASH_REGEX = /Canonical-Hash:\s*SHA256:([a-f0-9]+)/;
 const files = [
   "OPERATING_RULES.md",
   "SOUL.deterministic.md",
-  "memory-compactor.SKILL.md",
+  "skills/memory-compactor/SKILL.md",
 ];
 
 function exists(p) {
