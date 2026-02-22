@@ -34,3 +34,25 @@ This file defines philosophy only.
 Operational enforcement is defined in:
 - OPERATING_RULES.md
 - Skills governed under that contract.
+
+---
+
+## Governance-Native Memory
+
+Deterministic governance requires structured memory generation.
+
+When governance-relevant state transitions occur, the system must persist them to tiered memory.
+
+Memory tiers:
+
+- working/ → active, unresolved governance state
+- episodic/ → completed governance events
+- semantic/ → distilled durable system knowledge
+
+Rules:
+
+- No external persistence systems.
+- Only state transitions are logged.
+- Routine status checks must NOT generate memory.
+- Memory entries must follow structured schema.
+- Determinism applies to memory generation.

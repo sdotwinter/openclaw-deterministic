@@ -91,6 +91,26 @@ Maintain tiered memory system by:
 2. Extracting durable insights into semantic memory
 3. Archiving raw files (never deleting)
 
+---
+
+## Governance Event Compatibility
+
+Working and episodic tiers may contain:
+
+- Governance event entries
+- Threshold warnings
+- Compaction reports
+- Integrity block records
+
+Compactor must treat these as valid lifecycle content.
+
+Rules:
+
+- Never delete governance entries.
+- Always archive originals.
+- Preserve meaning during summarization.
+- Do not rewrite event semantics.
+
 ## Enterprise Semantic Governance
 
 ### Soft + Hard Semantic Limits

@@ -199,4 +199,31 @@ Creative, user-facing, or reputational messages:
 
 ---
 
+## Governance Event Logging
+
+The system must persist governance-relevant events.
+
+Events include:
+
+- Tier violations
+- Threshold crossings
+- Hard-limit blocks
+- Compaction execution
+- Upgrade integrity blocks
+- Revert execution
+
+Classification:
+
+- Logging is Tier B.
+- Unified diff must be presented before write.
+- Logging must NOT escalate Tier.
+
+Working tier:
+- Used for active or unresolved governance conditions.
+
+Episodic tier:
+- Used for completed governance transitions.
+
+Routine reads and non-events must NOT generate logs.
+
 End of Contract.
