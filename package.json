@@ -1,6 +1,6 @@
 {
   "name": "@sdotwinter/openclaw-deterministic",
-  "version": "0.21.0",
+  "version": "0.21.1",
   "description": "Deterministic governance and memory compaction layer for OpenClaw",
   "keywords": [
     "openclaw",
