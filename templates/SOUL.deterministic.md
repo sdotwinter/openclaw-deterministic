@@ -1,5 +1,5 @@
 <!--
-Canonical-Hash: SHA256:cecc37622199772452db7adebacc3fb781bba9c53be82abac93d304ebd1ff302
+Canonical-Hash: SHA256:c45c4119f2940d0f07abfee9a60248668607ed4775c8921261c399b86d7cdf9b
 -->
 
 # Deterministic Governance Overlay — Canonical

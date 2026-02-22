@@ -1,5 +1,5 @@
 <!--
-Canonical-Hash: SHA256:fdd25d1e79137ab6f7999e2c1024408b094c9f2f0af28f0e68e2200cbe53b187
+Canonical-Hash: SHA256:976962bce64984b3e8d64e063eccfe491760bd6a06393d854789853417681cc9
 -->
 
 # Memory Compactor Skill
